@@ -135,6 +135,16 @@ namespace cs_HW_1
         {
             Console.WriteLine($"{LastName}, {FirstName} ({AverageGrade():F2})");
         }
+        public override bool Equals(object obj)
+        {
+            if (obj is not Student1 other) return false;
+            return AverageGrade() == other.AverageGrade();
+        }
+
+        public override int GetHashCode()
+        {
+            return AverageGrade().GetHashCode();
+        }
     }
 
     class Group
@@ -215,6 +225,31 @@ namespace cs_HW_1
             if (Students.Count == 0) return;
             var worst = Students.OrderBy(s => s.AverageGrade()).First();
             Students.Remove(worst);
+        }
+
+        public static bool operator ==(Group left, Group right)
+        {
+            if (left is null)
+                return right is null;
+            if (right is null)
+                return false;
+
+            return left.Students.Count == right.Students.Count;
+        }
+
+        public static bool operator !=(Group left, Group right)
+        {
+            return !(left == right);
+        }
+        public override bool Equals(object obj)
+        {
+            if (obj is not Group other) return false;
+            return Students.Count == other.Students.Count;
+        }
+
+        public override int GetHashCode()
+        {
+            return Students.Count.GetHashCode();
         }
     }
 
