@@ -84,6 +84,55 @@ namespace cs_HW_1
 
     class Student1
     {
+        private string name;
+        private string lastname;
+        private int age;
+        private double averageGrade;
+
+        public string Name
+        {
+            get => name;
+            set
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                    throw new InvalidStudentDataException("Name");
+                name = value;
+            }
+        }
+
+        public string Lastname
+        {
+            get => lastname;
+            set
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                    throw new InvalidStudentDataException("Lastname");
+                lastname = value;
+            }
+        }
+
+        public int Age
+        {
+            get => age;
+            set
+            {
+                if (value < 0 || value > 120)
+                    throw new InvalidStudentDataException("Age");
+                age = value;
+            }
+        }
+
+        public double AverageGrade
+        {
+            get => averageGrade;
+            set
+            {
+                if (value < 0 || value > 100)
+                    throw new InvalidGradeException((int)value);
+                averageGrade = value;
+            }
+        }
+
         public string FirstName { get; set; }
         public string MiddleName { get; set; }
         public string LastName { get; set; }
@@ -125,7 +174,7 @@ namespace cs_HW_1
             }
         }
 
-        public double AverageGrade()
+        public double AverageGradeCalc()
         {
             var allGrades = Tests.Concat(Coursework).Concat(Exams).ToList();
             return allGrades.Count == 0 ? 0 : allGrades.Average();
@@ -133,22 +182,54 @@ namespace cs_HW_1
 
         public void ShowInfo()
         {
-            Console.WriteLine($"{LastName}, {FirstName} ({AverageGrade():F2})");
+            Console.WriteLine($"{LastName}, {FirstName} ({AverageGradeCalc():F2})");
         }
         public override bool Equals(object obj)
         {
             if (obj is not Student1 other) return false;
-            return AverageGrade() == other.AverageGrade();
+            return AverageGradeCalc() == other.AverageGradeCalc();
         }
 
         public override int GetHashCode()
         {
-            return AverageGrade().GetHashCode();
+            return AverageGradeCalc().GetHashCode();
         }
     }
 
     class Group
     {
+        private string specialization;
+        private int course;
+        private int count;
+
+        public int Count
+        {
+            get => Students.Count;
+            private set => count = value;
+        }
+
+        public string Specialization
+        {
+            get => specialization;
+            set
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                    throw new InvalidGroupDataException("specialization");
+                specialization = value;
+            }
+        }
+
+        public int Course
+        {
+            get => course;
+            set
+            {
+                if (value < 1 || value > 6)
+                    throw new InvalidGroupDataException("course");
+                course = value;
+            }
+        }
+
         public string GroupName { get; set; }
         public string LessonObject { get; set; }
         public int ClassId { get; set; }
@@ -165,6 +246,22 @@ namespace cs_HW_1
             GroupName = groupName;
             LessonObject = lessonObject;
             ClassId = classId;
+        }
+
+        public Student1 this[int index]
+        {
+            get
+            {
+                if (index < 0 || index >= Students.Count)
+                    throw new IndexOutOfRangeException();
+                return Students[index];
+            }
+            set
+            {
+                if (index < 0 || index >= Students.Count)
+                    throw new IndexOutOfRangeException();
+                Students[index] = value;
+            }
         }
 
         public void ShowAllStudents()
@@ -217,13 +314,13 @@ namespace cs_HW_1
 
         public void ExpelFailed(double minAverage = 50)
         {
-            Students.RemoveAll(s => s.AverageGrade() < minAverage);
+            Students.RemoveAll(s => s.AverageGradeCalc() < minAverage);
         }
 
         public void ExpelWorst()
         {
             if (Students.Count == 0) return;
-            var worst = Students.OrderBy(s => s.AverageGrade()).First();
+            var worst = Students.OrderBy(s => s.AverageGradeCalc()).First();
             Students.Remove(worst);
         }
 
@@ -251,6 +348,15 @@ namespace cs_HW_1
         {
             return Students.Count.GetHashCode();
         }
+
+        public delegate bool StudentFilter(Student1 student);
+        public List<Student1> FilterStudents(StudentFilter filter)
+        {
+            var result = new List<Student1>();
+            foreach (var s in Students)
+                if (filter(s)) result.Add(s);
+            return result;
+        }
     }
 
     class Program
@@ -259,26 +365,30 @@ namespace cs_HW_1
         {
             try
             {
-                var s1 = new Student1("Alex", "middle", "lastname", new DateTime(2011, 12, 1), "place", "1234567890");
-                s1.AddGrade(s1.Tests, 95);
-                s1.AddGrade(s1.Tests, -10);
+                var s1 = new Student1("Alex", "middle", "lastname", new DateTime(2011, 12, 1), "place", "1234567890") { Name = "Alex", Lastname = "lastname22", Age = 20, AverageGrade = 90 };
+                var s2 = new Student1("name2", "middle", "lastname", new DateTime(2011, 5, 10), "place", "5551234") { Name = "something", Lastname = "lastname33", Age = 25, AverageGrade = 80 };
+                var s3 = new Student1("name3", "middle", "lastname", new DateTime(2011, 8, 20), "place", "5559876") { Name = "something1", Lastname = "lastname44", Age = 40, AverageGrade = 70 };
 
-                var s2 = new Student1("name2", "middle", "lastname", new DateTime(2012, 5, 10), "place", "5551234");
-                s2.AddGrade(s2.Tests, 40);
-                s2.AddGrade(s2.Exams, 55);
+                var groupA = new Group(new List<Student1> { s1, s2, s3 }, "A1", "object", 1)
+                {
+                    Specialization = "Programming",
+                    Course = 2
+                };
 
-                var s3 = new Student1("name3", "middle", "lastname", new DateTime(2011, 8, 20), "place", "5559876");
-                s3.AddGrade(s3.Tests, 85);
-                s3.AddGrade(s3.Exams, 90);
-
-                var groupA = new Group(new List<Student1> { s1, s2, s3 }, "A1", "object", 1);
-                var groupB = new Group(new List<Student1>(), "B1", "object", 2);
+                Console.WriteLine("specialization: " + groupA.Specialization);
+                Console.WriteLine("course: " + groupA.Course);
+                Console.WriteLine("count: " + groupA.Count);
+                Console.WriteLine("student1: " + groupA[1].Name);
 
                 groupA.ShowAllStudents();
-                groupA.TransferStudent(s2, groupB);
-                groupA.TransferStudent(s2, groupB);
-                groupA.ShowAllStudents();
-                groupB.ShowAllStudents();
+
+                var excellent = groupA.FilterStudents(s => s.AverageGradeCalc() >= 10);
+                Console.WriteLine("good:");
+                excellent.ForEach(s => s.ShowInfo());
+
+                var nameB = groupA.FilterStudents(s => s.FirstName.StartsWith("Б"));
+                Console.WriteLine("nameB");
+                nameB.ForEach(s => s.ShowInfo());
             }
             catch (Exception ex)
             {
