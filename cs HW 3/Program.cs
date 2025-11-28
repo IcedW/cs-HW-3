@@ -89,6 +89,11 @@ namespace cs_HW_1
         private int age;
         private double averageGrade;
 
+        public event Action LectureMissed;
+        public event Action AutomatReceived;
+        public event Action ScholarshipAwarded;
+
+
         public string Name
         {
             get => name;
@@ -167,6 +172,8 @@ namespace cs_HW_1
                 if (grade < 0 || grade > 100)
                     throw new InvalidGradeException(grade);
                 list.Add(grade);
+                if (grade == 100)
+                    AutomatReceived?.Invoke();
             }
             catch (InvalidGradeException ex)
             {
@@ -177,7 +184,10 @@ namespace cs_HW_1
         public double AverageGradeCalc()
         {
             var allGrades = Tests.Concat(Coursework).Concat(Exams).ToList();
-            return allGrades.Count == 0 ? 0 : allGrades.Average();
+            double avg = allGrades.Count == 0 ? 0 : allGrades.Average();
+            if (avg >= 10)
+                ScholarshipAwarded?.Invoke();
+            return avg;
         }
 
         public void ShowInfo()
@@ -194,6 +204,17 @@ namespace cs_HW_1
         {
             return AverageGradeCalc().GetHashCode();
         }
+
+        public void CheckTime()
+        {
+            var now = DateTime.Now;
+            var lectureStart = DateTime.Today.AddHours(16).AddMinutes(45);
+
+            if (now > lectureStart)
+                LectureMissed?.Invoke();
+        }
+
+
     }
 
     class Group
@@ -201,6 +222,9 @@ namespace cs_HW_1
         private string specialization;
         private int course;
         private int count;
+
+        public event Action GroupPartyPlanned;
+        public event Action SessionSurvived;
 
         public int Count
         {
@@ -357,6 +381,17 @@ namespace cs_HW_1
                 if (filter(s)) result.Add(s);
             return result;
         }
+
+        public void CheckSession()
+        {
+            if (Students.Count == 0) return;
+            bool allExcellent = Students.All(s => s.AverageGradeCalc() >= 10);
+            if (allExcellent)
+            {
+                GroupPartyPlanned?.Invoke();
+                SessionSurvived?.Invoke();
+            }
+        }
     }
 
     class Program
@@ -380,7 +415,29 @@ namespace cs_HW_1
                 Console.WriteLine("count: " + groupA.Count);
                 Console.WriteLine("student1: " + groupA[1].Name);
 
+                s1.AddGrade(s1.Tests, 8);
+                s1.AddGrade(s1.Coursework, 10);
+                s1.AddGrade(s1.Exams, 8);
+                s2.AddGrade(s2.Tests, 7);
+                s2.AddGrade(s2.Coursework, 8);
+                s2.AddGrade(s2.Exams, 9);
+                s3.AddGrade(s3.Tests, 5);
+                s3.AddGrade(s3.Coursework, 10);
+                s3.AddGrade(s3.Exams, 12);
+
                 groupA.ShowAllStudents();
+
+                var filteredStudents =
+                    from st in groupA.Students
+                    where st.FirstName.StartsWith("A")
+                    where st.AverageGradeCalc() > 7
+                    where (st.Tests.Count + st.Coursework.Count + st.Exams.Count) > 5
+                    select st;
+
+                foreach (var st in filteredStudents)
+                {
+                    st.ShowInfo();
+                }
 
                 var excellent = groupA.FilterStudents(s => s.AverageGradeCalc() >= 10);
                 Console.WriteLine("good:");
@@ -389,6 +446,15 @@ namespace cs_HW_1
                 var nameB = groupA.FilterStudents(s => s.FirstName.StartsWith("Б"));
                 Console.WriteLine("nameB");
                 nameB.ForEach(s => s.ShowInfo());
+
+                s1.LectureMissed += () => Console.WriteLine("miss");
+                s1.AutomatReceived += () => Console.WriteLine("auto passed");
+                s1.ScholarshipAwarded += () => Console.WriteLine("awarded scholarship");
+                groupA.GroupPartyPlanned += () => Console.WriteLine("group party for everyone passing");
+                groupA.SessionSurvived += () => Console.WriteLine("passed");
+
+                s1.CheckTime();
+                groupA.CheckSession();
             }
             catch (Exception ex)
             {
